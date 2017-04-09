@@ -55,8 +55,12 @@ abstract class TweetSet {
    * and be implemented in the subclasses?
    */
   def union(that: TweetSet): TweetSet = {
-    val dup = visit()
-    that.visitAcc(dup)
+    def f(tw:Tweet, acc: TweetSet) = {
+      acc.incl(tw)
+    }
+
+    val dup = visit(f)
+    that.visitAcc(f,dup)
   }
   
   /**
@@ -108,8 +112,8 @@ abstract class TweetSet {
    */
   def foreach(f: Tweet => Unit): Unit
 
-  def visit():TweetSet
-  def visitAcc(acc:TweetSet):TweetSet
+  def visit(f: (Tweet, TweetSet) => TweetSet):TweetSet
+  def visitAcc(f: (Tweet, TweetSet) => TweetSet, acc:TweetSet):TweetSet
 
 }
 
@@ -128,8 +132,8 @@ class Empty extends TweetSet {
 
   def foreach(f: Tweet => Unit): Unit = ()
 
-  def visit():TweetSet = new Empty
-  def visitAcc(acc:TweetSet):TweetSet = acc
+  def visit(f: (Tweet,TweetSet) => TweetSet):TweetSet = new Empty
+  def visitAcc(f: (Tweet,TweetSet) => TweetSet, acc:TweetSet):TweetSet = acc
 }
 
 class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
@@ -169,12 +173,12 @@ class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
   }
 
 
-  def visit(): TweetSet = {
-    visitAcc(new Empty)
+  def visit(f: (Tweet, TweetSet) => TweetSet): TweetSet = {
+    visitAcc(f, new Empty)
   }
 
-  def visitAcc(acc: TweetSet): TweetSet = {
-    right.visitAcc(left.visitAcc(acc.incl(elem)))
+  def visitAcc(f: (Tweet, TweetSet) => TweetSet, acc: TweetSet): TweetSet = {
+    right.visitAcc(f,left.visitAcc(f,f(elem,acc)))
   }
 }
 
