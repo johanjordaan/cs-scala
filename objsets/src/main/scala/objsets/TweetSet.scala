@@ -55,10 +55,8 @@ abstract class TweetSet {
    * and be implemented in the subclasses?
    */
   def union(that: TweetSet): TweetSet = {
-    this.
-    var diff = that.filter(tw=>this.contains(tw))
-
-
+    val dup = visit()
+    that.visitAcc(dup)
   }
   
   /**
@@ -109,6 +107,10 @@ abstract class TweetSet {
    * This method takes a function and applies it to every element in the set.
    */
   def foreach(f: Tweet => Unit): Unit
+
+  def visit():TweetSet
+  def visitAcc(acc:TweetSet):TweetSet
+
 }
 
 class Empty extends TweetSet {
@@ -125,6 +127,9 @@ class Empty extends TweetSet {
   def remove(tweet: Tweet): TweetSet = this
 
   def foreach(f: Tweet => Unit): Unit = ()
+
+  def visit():TweetSet = new Empty
+  def visitAcc(acc:TweetSet):TweetSet = acc
 }
 
 class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
@@ -161,6 +166,15 @@ class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
     f(elem)
     left.foreach(f)
     right.foreach(f)
+  }
+
+
+  def visit(): TweetSet = {
+    visitAcc(new Empty)
+  }
+
+  def visitAcc(acc: TweetSet): TweetSet = {
+    right.visitAcc(left.visitAcc(acc.incl(elem)))
   }
 }
 
