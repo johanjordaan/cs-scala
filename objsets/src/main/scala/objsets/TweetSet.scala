@@ -11,6 +11,8 @@ class Tweet(val user: String, val text: String, val retweets: Int) {
     "Text: " + text + " [" + retweets + "]"
 }
 
+object EmptyTweet extends Tweet("","", -1);
+
 /**
  * This represents a set of objects of type `Tweet` in the form of a binary search
  * tree. Every branch in the tree has two children (two `TweetSet`s). There is an
@@ -72,7 +74,7 @@ abstract class TweetSet {
    * Question: Should we implment this method here, or should it remain abstract
    * and be implemented in the subclasses?
    */
-    def mostRetweeted: Tweet = ???
+  def mostRetweeted: Tweet = find((tw1:Tweet,tw2:Tweet)=>if(tw1.retweets>tw2.retweets) tw1 else tw2)
   
   /**
    * Returns a list containing all tweets of this set, sorted by retweet count
@@ -83,7 +85,14 @@ abstract class TweetSet {
    * Question: Should we implment this method here, or should it remain abstract
    * and be implemented in the subclasses?
    */
-    def descendingByRetweet: TweetList = ???
+  def descendingByRetweet: TweetList = {
+    def inner(ts:TweetSet,acc:TweetList):TweetList = {
+      if(ts.mostRetweeted == EmptyTweet) acc
+      else inner(ts.remove(ts.mostRetweeted), new Cons(ts.mostRetweeted,acc))
+    }
+
+    inner(this, Nil).reverse
+  }
   
   /**
    * The following methods are already implemented
@@ -115,6 +124,8 @@ abstract class TweetSet {
   def visit(f: (Tweet, TweetSet) => TweetSet):TweetSet
   def visitAcc(f: (Tweet, TweetSet) => TweetSet, acc:TweetSet):TweetSet
 
+  def find(f: (Tweet, Tweet) => Tweet):Tweet
+  def findAcc(f: (Tweet, Tweet) => Tweet, acc:Tweet):Tweet
 }
 
 class Empty extends TweetSet {
@@ -134,6 +145,9 @@ class Empty extends TweetSet {
 
   def visit(f: (Tweet,TweetSet) => TweetSet):TweetSet = new Empty
   def visitAcc(f: (Tweet,TweetSet) => TweetSet, acc:TweetSet):TweetSet = acc
+
+  def find(f: (Tweet, Tweet) => Tweet):Tweet = EmptyTweet
+  def findAcc(f: (Tweet, Tweet) => Tweet, acc:Tweet):Tweet = acc
 }
 
 class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
@@ -172,14 +186,15 @@ class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
     right.foreach(f)
   }
 
-
-  def visit(f: (Tweet, TweetSet) => TweetSet): TweetSet = {
-    visitAcc(f, new Empty)
-  }
+  def visit(f: (Tweet, TweetSet) => TweetSet): TweetSet = visitAcc(f, new Empty)
 
   def visitAcc(f: (Tweet, TweetSet) => TweetSet, acc: TweetSet): TweetSet = {
     right.visitAcc(f,left.visitAcc(f,f(elem,acc)))
   }
+
+  def find(f: (Tweet, Tweet) => Tweet):Tweet = findAcc(f, EmptyTweet)
+  def findAcc(f: (Tweet, Tweet) => Tweet, acc:Tweet):Tweet =
+    right.findAcc(f,left.findAcc(f,f(elem,acc)))
 }
 
 trait TweetList {
@@ -191,6 +206,14 @@ trait TweetList {
       f(head)
       tail.foreach(f)
     }
+  def reverse:TweetList = {
+    def _reverse(tl:TweetList,acc:TweetList):TweetList = {
+      if(tl.isEmpty) acc
+      else new Cons(_reverse(tl.tail,new Cons(tl.head,Nil)).head,new Cons(tl.head,Nil))
+    }
+
+    _reverse(this,Nil)
+  }
 }
 
 object Nil extends TweetList {
@@ -215,8 +238,8 @@ object GoogleVsApple {
    * A list of all tweets mentioning a keyword from either apple or google,
    * sorted by the number of retweets.
    */
-     lazy val trending: TweetList = ???
-  }
+  lazy val trending: TweetList = ???
+}
 
 object Main extends App {
   // Print the trending tweets
